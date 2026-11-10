@@ -121,9 +121,9 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
 
-      # ── 10. Terraform Apply (main branch only) ─────────────────────────────
+      # ── 10. Terraform Apply (master branch only) ─────────────────────────────
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
         run: |
           terraform apply \
             -auto-approve \
