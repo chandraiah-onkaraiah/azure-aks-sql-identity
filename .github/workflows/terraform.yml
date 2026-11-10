@@ -37,7 +37,6 @@ jobs:
   terraform:
     name: Terraform Plan & Apply
     runs-on: ubuntu-latest
-    environment: production   # Ties into GitHub environment protection rules
 
     defaults:
       run:
