@@ -138,6 +138,75 @@ terraform apply
 
 ---
 
+## CI/CD — GitHub Actions
+
+The workflow at `.github/workflows/terraform.yml` runs automatically whenever a `**.tf`, `**.tfvars`, or the workflow file itself changes.
+
+### Trigger behaviour
+
+| Event | Branch | What runs |
+|---|---|---|
+| Pull Request | `main` | Init → Fmt check → Validate → Plan → PR comment |
+| Push | `main` | Init → Fmt check → Validate → Plan → **Apply** |
+| Manual (`workflow_dispatch`) | any | Same as push |
+
+### OIDC — no client secrets
+
+Authentication uses [Workload Identity Federation (OIDC)](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure). The workflow requests a short-lived token from GitHub and exchanges it with Azure AD — no `ARM_CLIENT_SECRET` is ever stored.
+
+#### One-time Azure setup
+
+```bash
+# 1. Create a service principal (app registration)
+az ad app create --display-name "github-aks-terraform"
+
+# 2. Note the appId from the output, then create the SP
+APP_ID=$(az ad app list --display-name "github-aks-terraform" --query "[0].appId" -o tsv)
+az ad sp create --id $APP_ID
+
+# 3. Add a federated credential for your repo
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters '{
+    "name": "github-oidc",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:<your-org>/<your-repo>:ref:refs/heads/main",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+
+# 4. Assign Contributor role on the subscription
+az role assignment create \
+  --assignee $APP_ID \
+  --role Contributor \
+  --scope /subscriptions/<your-subscription-id>
+```
+
+For PR plan comments to work, also add a federated credential for pull requests:
+
+```bash
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters '{
+    "name": "github-oidc-pr",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:<your-org>/<your-repo>:pull_request",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+```
+
+#### Required GitHub Secrets
+
+Add these in **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|---|---|
+| `AZURE_CLIENT_ID` | App Registration (client) ID |
+| `AZURE_TENANT_ID` | Azure AD Tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Azure Subscription ID |
+| `SQL_ADMIN_PASSWORD` | SQL Server admin password |
+
+---
+
 ## Cleanup
 
 ```bash
