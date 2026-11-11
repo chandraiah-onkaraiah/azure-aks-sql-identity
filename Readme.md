@@ -1,4 +1,4 @@
-# AKS Private Cluster — Terraform
+# Secure Azure Cloud Infrastructure | Terraform, Private AKS & Azure SQL
 
 Terraform project that provisions a **fully private Azure Kubernetes Service (AKS) cluster** backed by an **Azure SQL Database** accessible only through a **Private Endpoint**. All resources live inside a dedicated Virtual Network, ensuring no public exposure for either the cluster API server or the database.
 
